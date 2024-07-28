@@ -150,6 +150,12 @@ Resources:
           if [ -f /home/ec2-user/workshop/requirements.txt ]; then
             pip install -r /home/ec2-user/workshop/requirements.txt 
           fi
+          # AWS CLI 설정
+          mkdir -p /home/ec2-user/.aws
+          cat <<EOF > /home/ec2-user/.aws/config
+          [default]
+          region = ${Region}
+          EOF
           # VS Code Server 설정
           mkdir -p /home/ec2-user/.config/code-server
           cat <<EOF > /home/ec2-user/.config/code-server/config.yaml
@@ -157,7 +163,7 @@ Resources:
           auth: none
           cert: false
           EOF
-          chown -R ec2-user:ec2-user /home/ec2-user/.config
+          chown -R ec2-user:ec2-user /home/ec2-user/.config /home/ec2-user/workshop
           # VS Code Server 서비스 구성
           cat <<EOF > /etc/systemd/system/code-server.service
           [Unit]
