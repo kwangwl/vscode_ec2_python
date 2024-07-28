@@ -21,8 +21,13 @@ Parameters:
     Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
     Default: "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64"
 
+  GitRepositoryUrl:
+    Description: "The URL of the Git repository to clone"
+    Type: String
+    Default: "https://github.com/kwangwl/amazon-bedrock-workshop.git"
+
 Resources:
-  # Create a VPC
+  # VPC 생성
   MyVPC:
     Type: 'AWS::EC2::VPC'
     Properties:
@@ -33,7 +38,7 @@ Resources:
         - Key: Name
           Value: MyVPC
 
-  # Create an Internet Gateway
+  # 인터넷 게이트웨이 생성
   InternetGateway:
     Type: 'AWS::EC2::InternetGateway'
     Properties:
@@ -41,14 +46,14 @@ Resources:
         - Key: Name
           Value: MyInternetGateway
 
-  # Attach Internet Gateway to the VPC
+  # VPC와 인터넷 게이트웨이 연결
   AttachGateway:
     Type: 'AWS::EC2::VPCGatewayAttachment'
     Properties:
       VpcId: !Ref MyVPC
       InternetGatewayId: !Ref InternetGateway
 
-  # Create a Public Subnet
+  # 퍼블릭 서브넷 생성
   PublicSubnet:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -63,7 +68,7 @@ Resources:
         - Key: Name
           Value: MyPublicSubnet
 
-  # Create a Route Table
+  # 라우트 테이블 생성
   RouteTable:
     Type: 'AWS::EC2::RouteTable'
     Properties:
@@ -72,14 +77,14 @@ Resources:
         - Key: Name
           Value: MyRouteTable
 
-  # Associate Route Table with the Public Subnet
+  # 퍼블릭 서브넷에 라우트 테이블 연결
   RouteTableAssociation:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
       SubnetId: !Ref PublicSubnet
       RouteTableId: !Ref RouteTable
 
-  # Create a Default Route to the Internet
+  # 인터넷으로의 기본 라우트 설정
   DefaultRoute:
     Type: 'AWS::EC2::Route'
     Properties:
@@ -87,7 +92,7 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
 
-  # Create a security group for the EC2 instance
+  # 보안 그룹 생성
   InstanceSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -103,7 +108,7 @@ Resources:
           ToPort: 8080
           CidrIp: 0.0.0.0/0
 
-  # Create an EC2 instance for VS Code Server
+  # EC2 인스턴스 생성 (VSCode)
   EC2Instance:
     Type: 'AWS::EC2::Instance'
     Properties:
@@ -123,25 +128,29 @@ Resources:
       UserData:
         'Fn::Base64': !Sub |
           #!/bin/bash
-          # AWS CLI 최신 버전 설치 / Install the latest version of AWS CLI
+          # AWS CLI 최신 버전 설치
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
           unzip awscliv2.zip
           sudo ./aws/install
-          # SSM 플러그인 설치 / Install SSM Plugin
-          sudo yum install -y https://s3.amazonaws.com/session-manager-downloads/plugin/latest/linux_64bit/session-manager-plugin.rpm
-          # 개발 도구 및 기타 필수 패키지 설치 / Install development tools and other necessary packages
+          # 개발 도구 및 기타 필수 패키지 설치
           yum update -y || dnf update -y
           yum install -y git || dnf install -y git
           yum groupinstall -y "Development Tools" || dnf groupinstall -y "Development Tools"
-          # python 3.9
+          # python 3.9 설치
           yum install -y python3.9 || dnf install -y python3.9
-          yum install python3-pip || dnf yum install python3-pip
-          # VS Code Server 설치 / Install VS Code Server
+          yum install -y python3-pip || dnf yum install -y python3-pip
+          ln -s /usr/bin/python3.9 /usr/bin/python
+          # VS Code Server 설치
           wget https://github.com/coder/code-server/releases/download/v4.0.1/code-server-4.0.1-linux-amd64.tar.gz
           tar -xzf code-server-4.0.1-linux-amd64.tar.gz
           mv code-server-4.0.1-linux-amd64 /usr/local/lib/code-server
           ln -s /usr/local/lib/code-server/bin/code-server /usr/local/bin/code-server
-          # VS Code Server 설정 / Configure VS Code Server
+          # git clone & requirements.txt 설치
+          git clone ${GitRepositoryUrl} /home/ec2-user/workshop
+          if [ -f /home/ec2-user/workshop/requirements.txt ]; then
+            pip install -r /home/ec2-user/workshop/requirements.txt 
+          fi
+          # VS Code Server 설정
           mkdir -p /home/ec2-user/.config/code-server
           cat <<EOF > /home/ec2-user/.config/code-server/config.yaml
           bind-addr: 0.0.0.0:8080
@@ -149,7 +158,7 @@ Resources:
           cert: false
           EOF
           chown -R ec2-user:ec2-user /home/ec2-user/.config
-          # VS Code Server 서비스 구성 / Configure VS Code Server service
+          # VS Code Server 서비스 구성
           cat <<EOF > /etc/systemd/system/code-server.service
           [Unit]
           Description=VS Code Server
