@@ -5,7 +5,7 @@ Parameters:
   Region:
     Description: "The AWS region where the resources will be deployed."
     Type: String
-    Default: "ap-northeast-2"
+    Default: "us-west-2"
 
   InstanceType:
     Description: "EC2 instance type for the server"
@@ -55,7 +55,10 @@ Resources:
       VpcId: !Ref MyVPC
       CidrBlock: 10.0.1.0/24
       MapPublicIpOnLaunch: true
-      AvailabilityZone: !Select [0, !GetAZs !Ref 'AWS::Region']
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs
+          Ref: 'AWS::Region'
       Tags:
         - Key: Name
           Value: MyPublicSubnet
