@@ -55,7 +55,7 @@ Resources:
       VpcId: !Ref MyVPC
       CidrBlock: 10.0.1.0/24
       MapPublicIpOnLaunch: true
-      AvailabilityZone: !Select [0, !GetAZs !Ref 'AWS:Region']
+      AvailabilityZone: !Select [0, !GetAZs !Ref 'AWS::Region']
       Tags:
         - Key: Name
           Value: MyPublicSubnet
@@ -89,7 +89,7 @@ Resources:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Enable SSH, HTTP, and HTTPS access
-      VpcId: !Ref DefaultVPCId
+      VpcId: !Ref MyVPC
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
