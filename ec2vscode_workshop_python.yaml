@@ -1,0 +1,209 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy an EC2 instance with VS Code Server in a public subnet of the default VPC in ap-northeast-2 using Amazon Linux 2 or Amazon Linux 2023
+
+Parameters:
+  Region:
+    Description: "The AWS region where the resources will be deployed."
+    Type: String
+    Default: "ap-northeast-2"
+
+  AvailabilityZone:
+    Description: "The Availability Zone where the EC2 instance will be deployed."
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: "ap-northeast-2a"
+
+#  KeyPair:
+#    Description: "Keypair to access the EC2 Instance"
+#    Type: "AWS::EC2::KeyPair::KeyName"
+#    Default: "mykey"
+
+  InstanceType:
+    Description: "EC2 instance type for the server"
+    Type: String
+    Default: "t3.xlarge"
+
+  AMIType:
+    Description: "Select the Amazon Linux version for the EC2 instance"
+    Type: String
+    AllowedValues:
+      - "AmazonLinux2"
+      - "AmazonLinux2023"
+    Default: "AmazonLinux2023"
+
+  AmazonLinux2AmiId:
+    Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
+    Default: "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+
+  AmazonLinux2023AmiId:
+    Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
+    Default: "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64"
+
+  DefaultVPCId:
+    Description: "The ID of the default VPC"
+    Type: AWS::EC2::VPC::Id
+
+  PublicSubnetId:
+    Description: "The ID of a public subnet in the default VPC"
+    Type: AWS::EC2::Subnet::Id
+
+Conditions:
+  UseAmazonLinux2: !Equals [!Ref AMIType, "AmazonLinux2"]
+  UseAmazonLinux2023: !Equals [!Ref AMIType, "AmazonLinux2023"]
+
+Resources:
+  # EC2 인스턴스에 대한 보안 그룹 생성 / Create a security group for the EC2 instance
+  InstanceSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable SSH, HTTP, and HTTPS access
+      VpcId: !Ref DefaultVPCId
+      SecurityGroupIngress:
+        - IpProtocol: icmp
+          CidrIp: 0.0.0.0/0
+          FromPort: -1
+          ToPort: -1
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+
+  # VS Code Server를 위한 EC2 인스턴스 생성 / Create an EC2 instance for VS Code Server
+  EC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref InstanceType
+ #     KeyName: !Ref KeyPair
+      ImageId: !If
+        - UseAmazonLinux2
+        - !Ref AmazonLinux2AmiId
+        - !Ref AmazonLinux2023AmiId
+      IamInstanceProfile: !Ref InstanceProfileSSM
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          SubnetId: !Ref PublicSubnetId
+          DeviceIndex: 0
+          GroupSet:
+            - !Ref InstanceSecurityGroup
+      # 루트 볼륨 크기 및 타입 설정 / Set root volume size and type
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 20  # 20GB
+            VolumeType: gp3
+      # EC2 인스턴스 초기화 스크립트 / EC2 instance initialization script
+      UserData:
+        'Fn::Base64': !Sub |
+          #!/bin/bash
+          # AWS CLI 최신 버전 설치 / Install the latest version of AWS CLI
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+          # SSM 플러그인 설치 / Install SSM Plugin
+          sudo yum install -y https://s3.amazonaws.com/session-manager-downloads/plugin/latest/linux_64bit/session-manager-plugin.rpm
+          # 개발 도구 및 기타 필수 패키지 설치 / Install development tools and other necessary packages
+          yum update -y || dnf update -y
+          yum install -y git || dnf install -y git
+          yum groupinstall -y "Development Tools" || dnf groupinstall -y "Development Tools"
+          curl -sL https://rpm.nodesource.com/setup_14.x | bash -
+          yum install -y nodejs || dnf install -y nodejs
+          # VS Code Server 설치 / Install VS Code Server
+          wget https://github.com/coder/code-server/releases/download/v4.0.1/code-server-4.0.1-linux-amd64.tar.gz
+          tar -xzf code-server-4.0.1-linux-amd64.tar.gz
+          mv code-server-4.0.1-linux-amd64 /usr/local/lib/code-server
+          ln -s /usr/local/lib/code-server/bin/code-server /usr/local/bin/code-server
+          # VS Code Server 설정 / Configure VS Code Server
+          mkdir -p /home/ec2-user/.config/code-server
+          cat <<EOF > /home/ec2-user/.config/code-server/config.yaml
+          bind-addr: 0.0.0.0:8080
+          auth: none
+          cert: false
+          EOF
+          chown -R ec2-user:ec2-user /home/ec2-user/.config
+          # VS Code Server 서비스 구성 / Configure VS Code Server service
+          cat <<EOF > /etc/systemd/system/code-server.service
+          [Unit]
+          Description=VS Code Server
+          After=network.target
+          [Service]
+          Type=simple
+          User=ec2-user
+          ExecStart=/usr/local/bin/code-server --config /home/ec2-user/.config/code-server/config.yaml
+          Restart=always
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+          systemctl daemon-reload
+          systemctl enable code-server
+          systemctl start code-server
+      Tags:
+        - Key: Name
+          Value: EC2VSCodeServer
+
+  # EC2 인스턴스 프로파일 생성 / Create an instance profile for EC2
+  InstanceProfileSSM:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Path: "/"
+      Roles:
+        - Ref: ServerRoleSSM
+
+  # SSM을 위한 IAM 역할 생성 / Create an IAM role for SSM
+  ServerRoleSSM:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action: "sts:AssumeRole"
+      # ManagedPolicyArns에서 관리자 권한 부여 / Grant Administrator Access in ManagedPolicyArns
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
+        - "arn:aws:iam::aws:policy/AdministratorAccess"  # 주의: AdministratorAccess 정책은 전체 AWS 계정에 대한 거의 모든 작업을 허용합니다. 보안 및 비용 관리 측면에서 주의가 필요합니다. / Note: The AdministratorAccess policy grants broad permissions across the entire AWS account. Use with caution for security and cost management.
+      Path: "/"
+
+  # SSM 엔드포인트 생성 / Create SSM VPC Endpoint
+  SSMEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      VpcId: !Ref DefaultVPCId
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: True
+      SubnetIds:
+        - Ref: PublicSubnetId
+      SecurityGroupIds:
+        - Ref: InstanceSecurityGroup
+
+  # SSM 메시지 엔드포인트 생성 / Create SSM Messages VPC Endpoint
+  SSMMEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      VpcId: !Ref DefaultVPCId
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: True
+      SubnetIds:
+        - Ref: PublicSubnetId
+      SecurityGroupIds:
+        - Ref: InstanceSecurityGroup
+
+Outputs:
+  EC2InstancePublicIP:
+    Description: "Public IP address of the VS Code Server EC2 instance"
+    Value: !GetAtt EC2Instance.PublicIp
