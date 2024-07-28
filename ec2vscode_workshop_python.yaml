@@ -35,55 +35,101 @@ Parameters:
     Type: AWS::EC2::Subnet::Id
 
 Resources:
-  # EC2 인스턴스에 대한 보안 그룹 생성 / Create a security group for the EC2 instance
+  # Create a VPC
+  MyVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: MyVPC
+
+  # Create an Internet Gateway
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: MyInternetGateway
+
+  # Attach Internet Gateway to the VPC
+  AttachGateway:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref MyVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # Create a Public Subnet
+  PublicSubnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [ 0, !GetAZs !Ref Region ]
+      Tags:
+        - Key: Name
+          Value: MyPublicSubnet
+
+  # Create a Route Table
+  RouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref MyVPC
+      Tags:
+        - Key: Name
+          Value: MyRouteTable
+
+  # Associate Route Table with the Public Subnet
+  RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref RouteTable
+
+  # Create a Default Route to the Internet
+  DefaultRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  # Create a security group for the EC2 instance
   InstanceSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Enable SSH, HTTP, and HTTPS access
       VpcId: !Ref DefaultVPCId
       SecurityGroupIngress:
-        - IpProtocol: icmp
-          CidrIp: 0.0.0.0/0
-          FromPort: -1
-          ToPort: -1
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
           FromPort: 8080
           ToPort: 8080
           CidrIp: 0.0.0.0/0
 
-  # VS Code Server를 위한 EC2 인스턴스 생성 / Create an EC2 instance for VS Code Server
+  # Create an EC2 instance for VS Code Server
   EC2Instance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      InstanceType: !Ref InstanceType
- #     KeyName: !Ref KeyPair
+      InstanceType: t3.xlarge
       ImageId: !Ref AmazonLinux2023AmiId
-      IamInstanceProfile: !Ref InstanceProfileSSM
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
-          SubnetId: !Ref PublicSubnetId
+          SubnetId: !Ref PublicSubnet
           DeviceIndex: 0
           GroupSet:
             - !Ref InstanceSecurityGroup
-      # 루트 볼륨 크기 및 타입 설정 / Set root volume size and type
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
             VolumeSize: 20  # 20GB
             VolumeType: gp3
-      # EC2 인스턴스 초기화 스크립트 / EC2 instance initialization script
       UserData:
         'Fn::Base64': !Sub |
           #!/bin/bash
@@ -132,58 +178,6 @@ Resources:
       Tags:
         - Key: Name
           Value: EC2VSCodeServer
-
-  # EC2 인스턴스 프로파일 생성 / Create an instance profile for EC2
-  InstanceProfileSSM:
-    Type: 'AWS::IAM::InstanceProfile'
-    Properties:
-      Path: "/"
-      Roles:
-        - Ref: ServerRoleSSM
-
-  # SSM을 위한 IAM 역할 생성 / Create an IAM role for SSM
-  ServerRoleSSM:
-    Type: 'AWS::IAM::Role'
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - ec2.amazonaws.com
-            Action: "sts:AssumeRole"
-      # ManagedPolicyArns에서 관리자 권한 부여 / Grant Administrator Access in ManagedPolicyArns
-      ManagedPolicyArns:
-        - "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
-        - "arn:aws:iam::aws:policy/AdministratorAccess"  # 주의: AdministratorAccess 정책은 전체 AWS 계정에 대한 거의 모든 작업을 허용합니다. 보안 및 비용 관리 측면에서 주의가 필요합니다. / Note: The AdministratorAccess policy grants broad permissions across the entire AWS account. Use with caution for security and cost management.
-      Path: "/"
-
-  # SSM 엔드포인트 생성 / Create SSM VPC Endpoint
-  SSMEndpoint:
-    Type: 'AWS::EC2::VPCEndpoint'
-    Properties:
-      VpcId: !Ref DefaultVPCId
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
-      VpcEndpointType: Interface
-      PrivateDnsEnabled: True
-      SubnetIds:
-        - Ref: PublicSubnetId
-      SecurityGroupIds:
-        - Ref: InstanceSecurityGroup
-
-  # SSM 메시지 엔드포인트 생성 / Create SSM Messages VPC Endpoint
-  SSMMEndpoint:
-    Type: 'AWS::EC2::VPCEndpoint'
-    Properties:
-      VpcId: !Ref DefaultVPCId
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
-      VpcEndpointType: Interface
-      PrivateDnsEnabled: True
-      SubnetIds:
-        - Ref: PublicSubnetId
-      SecurityGroupIds:
-        - Ref: InstanceSecurityGroup
 
 Outputs:
   EC2InstancePublicIP:
