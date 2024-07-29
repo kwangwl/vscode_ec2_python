@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Deploy an EC2 instance with VS Code Server in a public subnet of the default VPC in ap-northeast-2 using Amazon Linux 2 or Amazon Linux 2023
+Description: VsCode on EC2 with Amazon Linux 2023 & Python 3.9
 
 Parameters:
   Region:
@@ -199,7 +199,7 @@ Resources:
           [Service]
           Type=simple
           User=ec2-user
-          ExecStart=/usr/local/bin/code-server --config /home/ec2-user/.config/code-server/config.yaml
+          ExecStart=/usr/local/bin/code-server --config /home/ec2-user/.config/code-server/config.yaml /home/ec2-user/workshop
           Restart=always
           [Install]
           WantedBy=multi-user.target
