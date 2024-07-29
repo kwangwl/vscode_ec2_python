@@ -45,3 +45,34 @@ Amazon Linux 2023을 사용하여 EC2 인스턴스를 생성하고, Python 3.9, 
 ## 출력
 
 - `EC2InstancePublicIP`: VS Code 서버 EC2 인스턴스의 공용 IP 주소.
+
+## AWS Console 에서 실행
+
+1. **AWS Management Console에 로그인** 
+   서비스 메뉴에서 "CloudFormation"을 선택합니다.
+   ![Picture1.png](static%2FPicture1.png)
+2. **스택 생성 시작** 
+   CloudFormation 콘솔에서 "스택 생성(Create Stack)" 버튼을 클릭한다.
+   ![Picture2.png](static%2FPicture2.png)
+3. **템플릿 지정** 
+   "기존 템플릿 사용 (Choose an existing template)"을 선택하고 "템플릿 파일 업로드(Upload a template file)"을 선택하고, 해당 CloudFormation 템플릿 파일(ec2vscode_python.yaml)을 업로드합니다.
+    그런 다음 "다음(Next)" 버튼을 클릭합니다.
+   ![Picture3.png](static%2FPicture3.png)
+4. **스택 세부 정보 입력** 
+   스택 이름(Stack name)과 파라미터(Parameter) 값을 입력합니다. 파라미터 값은 기본값을 그대로 사용하거나 필요에 따라 수정합니다.
+  
+5. **구성 옵션 설정** 
+   "구성 옵션 구성(Configure stack options)" 단계에서는 태그(Tag), 권한(Permission), 고급 옵션(Advanced options) 등을 설정할 수 있습니다. 이 단계에서는 기본값을 사용하고 "다음(Next)" 버튼을 클릭합니다.
+
+6. **검토 및 생성** 
+   모든 설정을 검토한 후 "스택 생성(Create stack)" 버튼을 클릭하여 스택 생성을 시작합니다.
+
+7. **스택 생성 완료 확인** 
+   스택 생성이 완료될 때까지 기다립니다. 생성 상태가 "CREATE_COMPLETE"가 되면, 리소스가 성공적으로 배포된 것입니다.
+
+8. **출력 확인** 
+   CloudFormation 콘솔의 스택 상세 정보에서 "출력(Outputs)" 탭을 확인하여 EC2 인스턴스의 공용 IP 주소를 확인합니다. 이 IP 주소를 사용하여 VS Code 서버에 접속할 수 있습니다.
+
+이제 모든 단계가 완료되었습니다. 필요에 따라 추가 설정을 하거나 VS Code 서버에 접속하여 작업을 시작할 수 있습니다.
+```
+
