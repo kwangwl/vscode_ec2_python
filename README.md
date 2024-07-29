@@ -50,14 +50,14 @@ Amazon Linux 2023을 사용하여 EC2 인스턴스를 생성하고, Python 3.9, 
 
 1. **AWS Management Console에 로그인** 
    서비스 메뉴에서 "CloudFormation"을 선택합니다.
-   ![Picture1.png](static%2FPicture1.png)
+   ![Picture1.png](static/Picture1.png)
 2. **스택 생성 시작** 
    CloudFormation 콘솔에서 "스택 생성(Create Stack)" 버튼을 클릭한다.
-   ![Picture2.png](static%2FPicture2.png)
+   ![Picture2.png](static/Picture2.png)
 3. **템플릿 지정** 
    "기존 템플릿 사용 (Choose an existing template)"을 선택하고 "템플릿 파일 업로드(Upload a template file)"을 선택하고, 해당 CloudFormation 템플릿 파일(ec2vscode_python.yaml)을 업로드합니다.
     그런 다음 "다음(Next)" 버튼을 클릭합니다.
-   ![Picture3.png](static%2FPicture3.png)
+   ![Picture3.png](static/Picture3.png)
 4. **스택 세부 정보 입력** 
    스택 이름(Stack name)과 파라미터(Parameter) 값을 입력합니다. 파라미터 값은 기본값을 그대로 사용하거나 필요에 따라 수정합니다.
   
