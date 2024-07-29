@@ -96,7 +96,7 @@ Resources:
   InstanceSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: Enable SSH, HTTP, and HTTPS access
+      GroupDescription: Enable HTTP, and 8080 and 8000 port
       VpcId: !Ref MyVPC
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -106,6 +106,10 @@ Resources:
         - IpProtocol: tcp
           FromPort: 8080
           ToPort: 8080
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8000
           CidrIp: 0.0.0.0/0
 
   # IAM Role 생성
