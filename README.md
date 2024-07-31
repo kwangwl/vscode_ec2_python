@@ -91,7 +91,7 @@ CloudFormation 콘솔의 스택 상세 정보에서 "출력(Outputs)" 탭을 확
 
 ### 9. vscode on server 접속
 
-출력에서 확인한 Ip 주소를 바탕으로 "http://Ip주소:8080" 로 vscode 에 접속합니다. EC2 구동으로 인해 초기 몇분은 접속이 안될수 있습니다.
+출력에서 확인한 Ip 주소를 바탕으로 "http://Ip주소:8000" 로 vscode 에 접속합니다. EC2 구동으로 인해 초기 몇분은 접속이 안될수 있습니다.
 
 ![Picture9.png](static/Picture9.png)
 
