@@ -7,6 +7,16 @@ Parameters:
     Type: String
     Default: "us-west-2"
 
+  VpcCidrBlock:
+    Description: "The CIDR block for the VPC"
+    Type: String
+    Default: "172.30.0.0/16"
+
+  PublicSubnetCidrBlock:
+    Description: "The CIDR block for the public subnet"
+    Type: String
+    Default: "172.30.1.0/24"
+
   InstanceType:
     Description: "EC2 instance type for the server"
     Type: String
@@ -31,7 +41,7 @@ Resources:
   MyVPC:
     Type: 'AWS::EC2::VPC'
     Properties:
-      CidrBlock: 172.30.0.0/16
+      CidrBlock: !Ref VpcCidrBlock
       EnableDnsSupport: true
       EnableDnsHostnames: true
       Tags:
@@ -58,7 +68,7 @@ Resources:
     Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref MyVPC
-      CidrBlock: 172.30.1.0/24
+      CidrBlock: !Ref PublicSubnetCidrBlock
       MapPublicIpOnLaunch: true
       AvailabilityZone: !Select
         - 0

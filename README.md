@@ -6,6 +6,8 @@
 ## 파라미터
 
 - `Region`: 리소스가 배포될 AWS 리전. 기본값은 `us-west-2`.
+- `VpcCidrBlock`: VPC의 CIDR 블록. 기본값은 172.30.0.0/16.
+- `PublicSubnetCidrBlock` : 퍼블릭 서브넷의 CIDR 블록. 기본값은 172.30.1.0/24.
 - `InstanceType`: EC2 인스턴스 유형. 기본값은 `t3.xlarge`.
 - `AMIType`: EC2 인스턴스를 위한 Amazon Linux 버전. 기본값은 `AmazonLinux2023`.
 - `AmazonLinux2023AmiId`: Amazon Linux 2023 AMI ID.
@@ -31,7 +33,10 @@ VPC 내에 퍼블릭 서브넷을 생성합니다.
 
 ### 보안 그룹
 
-HTTP, 8080, 8000 포트 액세스를 허용하는 보안 그룹을 생성합니다. 여기서 8000 포트는 streamlit 데모 실행시 적용하는 포트를 의미합니다. (즉, streamlit 실행시 8000 포트로 실행 필수)
+HTTP, 8080, 8000 포트 액세스를 허용하는 보안 그룹을 생성합니다.
+여기서 8000 포트는 해당 VSCode on EC2 를 접속하는 포트이며
+8080 포트는 streamlit 데모 실행시 적용하는 포트를 의미합니다.
+(즉, streamlit 실행시 8080 포트로 실행 필수, 일반적으로 Streamlit 은 8080포트 사용)
 
 ### IAM Role
 
