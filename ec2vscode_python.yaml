@@ -31,7 +31,7 @@ Resources:
   MyVPC:
     Type: 'AWS::EC2::VPC'
     Properties:
-      CidrBlock: 10.0.0.0/16
+      CidrBlock: 172.30.0.0/16
       EnableDnsSupport: true
       EnableDnsHostnames: true
       Tags:
@@ -58,7 +58,7 @@ Resources:
     Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref MyVPC
-      CidrBlock: 10.0.1.0/24
+      CidrBlock: 172.30.1.0/24
       MapPublicIpOnLaunch: true
       AvailabilityZone: !Select
         - 0
@@ -104,11 +104,11 @@ Resources:
           ToPort: 80
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
-          FromPort: 8080
+          FromPort: 8080  # Streamlit app
           ToPort: 8080
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
-          FromPort: 8000
+          FromPort: 8000  # VSCode
           ToPort: 8000
           CidrIp: 0.0.0.0/0
 
@@ -189,7 +189,7 @@ Resources:
           # VS Code Server 설정
           mkdir -p /home/ec2-user/.config/code-server
           cat <<EOF > /home/ec2-user/.config/code-server/config.yaml
-          bind-addr: 0.0.0.0:8080
+          bind-addr: 0.0.0.0:8000
           auth: none
           cert: false
           EOF
