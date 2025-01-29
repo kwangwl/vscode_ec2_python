@@ -5,7 +5,7 @@ Parameters:
   Region:
     Description: "The AWS region where the resources will be deployed."
     Type: String
-    Default: "us-west-2"
+    Default: "ap-northeast-2"
 
   VpcCidrBlock:
     Description: "The CIDR block for the VPC"
@@ -102,25 +102,14 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
 
-  # 보안 그룹 생성
+  # 보안 그룹 생성 (별도로 User IP 만 열리도록 수정)
   InstanceSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: Enable HTTP, and 8080 and 8000 port
+      GroupName: MyCustomSecurityGroup
+      GroupDescription: Enable 8080 and 8080 port
       VpcId: !Ref VsCodeVPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 8080  # Streamlit app
-          ToPort: 8080
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 8000  # VSCode
-          ToPort: 8000
-          CidrIp: 0.0.0.0/0
+      # SecurityGroupIngress:
 
   # IAM Role 생성
   VsCodeInstanceRole:
@@ -181,9 +170,9 @@ Resources:
           yum install -y python3-pip || dnf yum install -y python3-pip
           ln -s /usr/bin/python3.9 /usr/bin/python
           # VS Code Server 설치
-          wget https://github.com/coder/code-server/releases/download/v4.0.1/code-server-4.0.1-linux-amd64.tar.gz
-          tar -xzf code-server-4.0.1-linux-amd64.tar.gz
-          mv code-server-4.0.1-linux-amd64 /usr/local/lib/code-server
+          wget https://github.com/coder/code-server/releases/download/v4.96.2/code-server-4.96.2-linux-amd64.tar.gz
+          tar -xzf code-server-4.96.2-linux-amd64.tar.gz
+          mv code-server-4.96.2-linux-amd64 /usr/local/lib/code-server
           ln -s /usr/local/lib/code-server/bin/code-server /usr/local/bin/code-server
           # git clone & requirements.txt 설치
           git clone ${GitRepositoryUrl} /home/ec2-user/workshop
@@ -228,4 +217,4 @@ Resources:
 Outputs:
   EC2InstancePublicIP:
     Description: "Public IP address of the VS Code Server EC2 instance"
-    Value: !GetAtt EC2Instance.PublicIp
+    Value: !Sub "http://${EC2Instance.PublicIp}:8000"
